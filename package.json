@@ -1,0 +1,49 @@
+{
+  "name": "file-upload",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "lint:js": "eslint --fix",
+    "lint": "eslint . --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeyan1996/file-upload.git"
+  },
+  "keywords": [
+    "upload"
+  ],
+  "author": "yeyan1996",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yeyan1996/file-upload/issues"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,vue,ts,tsx}": [
+      "npm run lint:js",
+      "git add"
+    ]
+  },
+  "homepage": "https://github.com/yeyan1996/file-upload#readme",
+  "devDependencies": {
+    "eslint": "^6.7.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-prettier": "^6.7.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.1",
+    "fs-extra": "^8.1.0",
+    "husky": "^3.1.0",
+    "lint-staged": "^9.5.0",
+    "multiparty": "^4.2.1",
+    "nodemon": "^2.0.1",
+    "prettier": "^1.19.1",
+    "@types/fs-extra": "^8.0.1"
+  }
+}
