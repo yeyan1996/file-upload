@@ -1,23 +1,14 @@
 module.exports = {
+  root: true,
   env: {
-    browser: true,
-    commonjs: true,
-    es6: true,
     node: true
   },
-  extends: ["airbnb-base", "plugin:prettier/recommended"],
-  globals: {
-    Atomics: "readonly",
-    SharedArrayBuffer: "readonly"
+  extends: ["plugin:vue/essential", "@vue/prettier"],
+  rules: {
+    "no-console": process.env.NODE_ENV === "production" ? "error" : "off",
+    "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off"
   },
   parserOptions: {
-    ecmaVersion: 2018
-  },
-  rules: {
-    "no-unused-expressions": "off",
-    "import/no-unresolved": "off",
-    "import/no-extraneous-dependencies": "off",
-    "no-console": "off",
-    "no-debugger": "off"
+    parser: "babel-eslint"
   }
 };

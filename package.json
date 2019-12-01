@@ -1,10 +1,10 @@
 {
   "name": "file-upload",
   "version": "1.0.0",
-  "description": "",
+  "description": "大文件上传",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "start": "vue-cli-service serve & nodemon server/index.js",
     "lint:js": "eslint --fix",
     "lint": "eslint . --fix"
   },
@@ -32,18 +32,29 @@
     ]
   },
   "homepage": "https://github.com/yeyan1996/file-upload#readme",
+  "dependencies": {
+    "core-js": "^3.4.3",
+    "element-ui": "^2.13.0",
+    "vue": "^2.6.10"
+  },
   "devDependencies": {
-    "eslint": "^6.7.1",
-    "eslint-config-airbnb-base": "^14.0.0",
-    "eslint-config-prettier": "^6.7.0",
-    "eslint-plugin-import": "^2.18.2",
+    "@vue/cli-plugin-babel": "^4.1.0",
+    "@vue/cli-plugin-eslint": "^4.1.0",
+    "@vue/cli-service": "^4.1.0",
+    "@vue/eslint-config-prettier": "^5.0.0",
+    "babel-eslint": "^10.0.3",
+    "eslint": "^5.16.0",
     "eslint-plugin-prettier": "^3.1.1",
+    "eslint-plugin-vue": "^5.0.0",
+    "prettier": "^1.19.1",
+    "sass": "^1.23.7",
+    "sass-loader": "^8.0.0",
+    "vue-template-compiler": "^2.6.10",
     "fs-extra": "^8.1.0",
     "husky": "^3.1.0",
     "lint-staged": "^9.5.0",
     "multiparty": "^4.2.1",
     "nodemon": "^2.0.1",
-    "prettier": "^1.19.1",
     "@types/fs-extra": "^8.0.1"
   }
 }
