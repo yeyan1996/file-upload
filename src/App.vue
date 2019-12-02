@@ -13,9 +13,9 @@
         align="center"
       ></el-table-column>
       <el-table-column
-        lable="大小"
-        align="center"
         prop="size"
+        label="大小(B)"
+        align="center"
       ></el-table-column>
       <el-table-column label="进度" align="center">
         <template v-slot="{ row }">
@@ -27,7 +27,7 @@
 </template>
 
 <script>
-const LENGTH = 5; // 切片数量
+const LENGTH = 50; // 切片数量
 
 export default {
   name: "app",
@@ -77,20 +77,25 @@ export default {
       return fileChunkList;
     },
     // 生成切片 hash
-    async createFileHash(file) {
-      return new Promise(resolve => {
-        const reader = new FileReader();
-        reader.readAsArrayBuffer(file);
-        reader.onload = e => {
-          const spark = new window.SparkMD5.ArrayBuffer();
-          spark.append(e.target.result);
-          resolve(spark.end());
-        };
-      });
+    // async createFileHash(file) {
+    //   return new Promise(resolve => {
+    //     const reader = new FileReader();
+    //     reader.readAsArrayBuffer(file);
+    //     reader.onload = e => {
+    //       const spark = new window.SparkMD5.ArrayBuffer();
+    //       spark.append(e.target.result);
+    //       resolve(spark.end());
+    //     };
+    //   });
+    // },
+    // todo auth + name + size
+    createFileHash(file, index) {
+      return `${file.name || index}-${file.size}`;
     },
     async handleFileChange(e) {
       Object.assign(this.$data, this.$options.data());
       [this.container.file] = e.target.files;
+      if (!this.container.file) return;
       this.container.hash = await this.createFileHash(this.container.file);
     },
     async handleUpload() {
@@ -98,7 +103,9 @@ export default {
       const fileChunkList = this.createFileChunk(this.container.file);
 
       const chunkHashList = await Promise.all(
-        fileChunkList.map(fileChunk => this.createFileHash(fileChunk))
+        fileChunkList.map((fileChunk, index) =>
+          this.createFileHash(fileChunk, index)
+        )
       );
 
       this.data = chunkHashList.map((chunkHash, index) => ({
