@@ -4,40 +4,49 @@ const path = require("path");
 const fse = require("fs-extra");
 
 const server = http.createServer();
-const isJSON = contentType => contentType === "application/json";
-const TEMP_DIR = path.resolve(__dirname, "..", "temp"); // 分片存储目录
+const extractExt = filename =>
+  filename.slice(filename.lastIndexOf("."), filename.length);
+const TEMP_DIR = path.resolve(__dirname, "..", "target/temp"); // 临时文件存储目录
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target"); // 大文件存储目录
 
-const mergeFileChunk = (writeStream, chunkHash) => {
-  const chunkPath = `${TEMP_DIR}/${chunkHash}`;
-  const readStream = fse.createReadStream(chunkPath);
-  // 添加 end 参数，防止响应提前结束
-  readStream.pipe(writeStream, { end: false });
-  // 当 pipe 结束时，会触发 end 事件
-  readStream.on("end", async () => {
-    await fse.unlink(chunkPath);
+// 合并切片
+const mergeFileChunk = async (filePath, fileHash) => {
+  const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
+  const chunkPaths = fse.readdirSync(chunkDir);
+  await fse.writeFileSync(filePath, "");
+  chunkPaths.forEach(chunkPath => {
+    fse.appendFileSync(filePath, fse.readFileSync(`${chunkDir}/${chunkPath}`));
+    fse.unlinkSync(`${chunkDir}/${chunkPath}`);
   });
+
+  fse.rmdirSync(chunkDir);
 };
 
-const handleJSON = (req, res) => {
+const handleMerge = (req, res) => {
   let chunk = "";
   req.on("data", data => {
     chunk += data;
   });
   req.on("end", async () => {
-    const { fileHash, chunkHashList } = JSON.parse(chunk);
-    const targetPath = `${UPLOAD_DIR}/${fileHash}`;
-    if (fse.existsSync(targetPath)) {
-      res.end("file exist,skip merge");
-      return;
-    }
-    const writeStream = fse.createWriteStream(`${UPLOAD_DIR}/${fileHash}`);
-    chunkHashList.forEach(chunkHash => mergeFileChunk(writeStream, chunkHash));
-    res.end("file merged success");
+    const { fileHash, filename } = JSON.parse(chunk);
+    const ext = extractExt(filename);
+    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    await mergeFileChunk(filePath, fileHash);
+    res.end(
+      JSON.stringify({
+        code: 0,
+        message: "file merged success"
+      })
+    );
   });
 };
 
-const handleFormData = (req, res) => {
+const handleFormData = async (req, res) => {
+  // 临时目录不存在，创建临时目录
+  if (!fse.existsSync(TEMP_DIR)) {
+    await fse.mkdirs(TEMP_DIR);
+  }
+
   const multipart = new multiparty.Form({
     autoFiles: true,
     uploadDir: TEMP_DIR
@@ -45,19 +54,55 @@ const handleFormData = (req, res) => {
 
   multipart.parse(req, async (err, fields, files) => {
     if (err) {
-      console.warn(err);
+      console.error(err);
       res.status = 500;
       res.end("process file chunk failed");
       return;
     }
     const [chunk] = files.chunk;
-    const [chunkHash] = fields.chunkHash;
-    const splitPoint = chunk.path.lastIndexOf("/");
-    await fse.rename(
-      chunk.path,
-      `${chunk.path.slice(0, splitPoint)}/${chunkHash}`
-    );
+    const [hash] = fields.hash;
+    const [fileHash] = fields.fileHash;
+    const [filename] = fields.filename;
+    const filePath = `${UPLOAD_DIR}/${fileHash}${extractExt(filename)}`;
+    const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
+
+    // 文件存在直接返回
+    if (fse.existsSync(filePath)) {
+      res.end("file exist");
+      return;
+    }
+
+    // 切片目录不存在，创建切片目录
+    if (!fse.existsSync(chunkDir)) {
+      await fse.mkdirs(chunkDir);
+    }
+    await fse.rename(chunk.path, `${chunkDir}/${hash}`);
     res.end("received file chunk");
+  });
+};
+
+const handleVerifyUpload = (req, res) => {
+  let chunk = "";
+  req.on("data", data => {
+    chunk += data;
+  });
+  req.on("end", async () => {
+    const { fileHash, filename } = JSON.parse(chunk);
+    const ext = extractExt(filename);
+    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    if (fse.existsSync(filePath)) {
+      res.end(
+        JSON.stringify({
+          shouldUpload: false
+        })
+      );
+    } else {
+      res.end(
+        JSON.stringify({
+          shouldUpload: true
+        })
+      );
+    }
   });
 };
 
@@ -69,7 +114,16 @@ server.on("request", async (req, res) => {
     res.end();
     return;
   }
-  const contentType = req.headers["content-type"];
-  isJSON(contentType) ? handleJSON(req, res) : handleFormData(req, res);
+  if (req.url === "/verify") {
+    handleVerifyUpload(req, res);
+    return;
+  }
+
+  if (req.url === "/merge") {
+    handleMerge(req, res);
+    return;
+  }
+
+  await handleFormData(req, res);
 });
 server.listen(3000, () => console.log("正在监听 3000 端口"));

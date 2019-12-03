@@ -1,14 +1,18 @@
 <template>
   <div id="app">
-    <input type="file" @change="handleFileChange" />
-    <el-button @click="handleUpload">上传</el-button>
     <div>
+      <input type="file" @change="handleFileChange" />
+      <el-button @click="handleUpload">上传</el-button>
+    </div>
+    <div>
+      <div>计算文件 hash</div>
+      <el-progress :percentage="hashPercentage"></el-progress>
       <div>总进度</div>
-      <el-progress :percentage="totalPercentage"></el-progress>
+      <el-progress :percentage="uploadPercentage"></el-progress>
     </div>
     <el-table :data="data">
       <el-table-column
-        prop="chunkHash"
+        prop="hash"
         label="切片hash"
         align="center"
       ></el-table-column>
@@ -27,7 +31,8 @@
 </template>
 
 <script>
-const LENGTH = 50; // 切片数量
+const LENGTH = 10; // 切片数量
+import SparkMD5 from "spark-md5";
 
 export default {
   name: "app",
@@ -36,10 +41,12 @@ export default {
       file: null,
       hash: ""
     },
-    data: []
+    hashPercentage: 0,
+    data: [],
+    uploadCompleted: false
   }),
   computed: {
-    totalPercentage() {
+    uploadPercentage() {
       if (!this.container.file || !this.data.length) return 0;
       const loaded = this.data
         .map(item => item.size * item.percentage)
@@ -61,66 +68,73 @@ export default {
         xhr.onload = e => resolve(e);
       });
     },
-    // 提取扩展名
-    extractExt(file) {
-      return file.name.slice(file.name.lastIndexOf("."), file.name.length);
-    },
     // 生成文件切片
     createFileChunk(file, length = LENGTH) {
       const fileChunkList = [];
       const chunkSize = Math.ceil(file.size / length);
       let cur = 0;
       while (cur < file.size) {
-        fileChunkList.push(file.slice(cur, cur + chunkSize));
+        fileChunkList.push({ file: file.slice(cur, cur + chunkSize) });
         cur += chunkSize;
       }
       return fileChunkList;
     },
-    // 生成切片 hash
-    // async createFileHash(file) {
-    //   return new Promise(resolve => {
-    //     const reader = new FileReader();
-    //     reader.readAsArrayBuffer(file);
-    //     reader.onload = e => {
-    //       const spark = new window.SparkMD5.ArrayBuffer();
-    //       spark.append(e.target.result);
-    //       resolve(spark.end());
-    //     };
-    //   });
-    // },
-    // todo auth + name + size
-    createFileHash(file, index) {
-      return `${file.name || index}-${file.size}`;
+    calculateHash(fileChunkList) {
+      return new Promise(resolve => {
+        const spark = new SparkMD5.ArrayBuffer();
+        let count = 0;
+        const loadNext = index => {
+          const reader = new FileReader();
+          reader.readAsArrayBuffer(fileChunkList[index].file);
+          reader.onload = e => {
+            count++;
+            spark.append(e.target.result);
+            this.hashPercentage += 100 / LENGTH;
+            if (count === fileChunkList.length) {
+              resolve(spark.end());
+            } else {
+              loadNext(count);
+            }
+          };
+        };
+        loadNext(0);
+      });
     },
     async handleFileChange(e) {
       Object.assign(this.$data, this.$options.data());
       [this.container.file] = e.target.files;
-      if (!this.container.file) return;
-      this.container.hash = await this.createFileHash(this.container.file);
     },
     async handleUpload() {
-      if (!this.container.file) return;
+      if (!this.container.file || this.uploadCompleted) return;
+
       const fileChunkList = this.createFileChunk(this.container.file);
+      this.container.hash = await this.calculateHash(fileChunkList);
 
-      const chunkHashList = await Promise.all(
-        fileChunkList.map((fileChunk, index) =>
-          this.createFileHash(fileChunk, index)
-        )
+      const shouldUpload = await this.verifyUpload(
+        this.container.file.name,
+        this.container.hash
       );
+      if (!shouldUpload) {
+        this.$message.warning("文件已存在");
+        this.uploadCompleted = true;
+        return;
+      }
 
-      this.data = chunkHashList.map((chunkHash, index) => ({
-        chunkHash,
-        chunk: fileChunkList[index],
-        size: fileChunkList[index].size,
+      this.data = fileChunkList.map(({ file }, index) => ({
+        fileHash: this.container.hash,
+        hash: this.container.hash + "-" + index,
+        chunk: file,
+        size: file.size,
         percentage: 0
       }));
 
       const requestList = this.data
-        .map(item => item.chunk)
-        .map((chunk, index) => {
+        .map(({ chunk, hash }) => {
           const formData = new FormData();
           formData.append("chunk", chunk);
-          formData.append("chunkHash", this.data[index].chunkHash);
+          formData.append("hash", hash);
+          formData.append("filename", this.container.file.name);
+          formData.append("fileHash", this.container.hash);
           return formData;
         })
         .map((formData, index) =>
@@ -131,16 +145,31 @@ export default {
           })
         );
       await Promise.all(requestList);
-      this.request({
-        url: "http://localhost:3000",
+      await this.request({
+        url: "http://localhost:3000/merge",
         headers: {
           "content-type": "application/json"
         },
         data: JSON.stringify({
-          fileHash: this.container.hash + this.extractExt(this.container.file),
-          chunkHashList: this.data.map(item => item.chunkHash)
+          fileHash: this.container.hash,
+          filename: this.container.file.name
         })
       });
+      this.$message.success("上传成功");
+      this.uploadCompleted = true;
+    },
+    async verifyUpload(filename, fileHash) {
+      const res = await this.request({
+        url: "http://localhost:3000/verify",
+        headers: {
+          "content-type": "application/json"
+        },
+        data: JSON.stringify({
+          filename,
+          fileHash
+        })
+      });
+      return JSON.parse(res.target.response).shouldUpload;
     },
     createProgressHandler(item) {
       return e => {

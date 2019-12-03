@@ -4,7 +4,8 @@
   "description": "大文件上传",
   "main": "index.js",
   "scripts": {
-    "start": "vue-cli-service serve & nodemon server/index.js",
+    "start": "vue-cli-service serve",
+    "server":"nodemon server/index.js",
     "lint:js": "eslint --fix",
     "lint": "eslint . --fix"
   },
@@ -34,10 +35,12 @@
   "homepage": "https://github.com/yeyan1996/file-upload#readme",
   "dependencies": {
     "core-js": "^3.4.3",
+    "dayjs": "^1.8.17",
     "element-ui": "^2.13.0",
     "vue": "^2.6.10"
   },
   "devDependencies": {
+    "@types/fs-extra": "^8.0.1",
     "@vue/cli-plugin-babel": "^4.1.0",
     "@vue/cli-plugin-eslint": "^4.1.0",
     "@vue/cli-service": "^4.1.0",
@@ -46,15 +49,15 @@
     "eslint": "^5.16.0",
     "eslint-plugin-prettier": "^3.1.1",
     "eslint-plugin-vue": "^5.0.0",
-    "prettier": "^1.19.1",
-    "sass": "^1.23.7",
-    "sass-loader": "^8.0.0",
-    "vue-template-compiler": "^2.6.10",
     "fs-extra": "^8.1.0",
     "husky": "^3.1.0",
     "lint-staged": "^9.5.0",
     "multiparty": "^4.2.1",
     "nodemon": "^2.0.1",
-    "@types/fs-extra": "^8.0.1"
+    "prettier": "^1.19.1",
+    "sass": "^1.23.7",
+    "sass-loader": "^8.0.0",
+    "spark-md5": "^3.0.0",
+    "vue-template-compiler": "^2.6.10"
   }
 }
