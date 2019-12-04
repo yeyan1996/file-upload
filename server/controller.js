@@ -52,6 +52,7 @@ module.exports = class {
       );
     });
   }
+  // 合并切片
   handleMerge(req, res) {
     resolvePost(req, async data => {
       const { fileHash, filename } = JSON.parse(data);
@@ -105,6 +106,7 @@ module.exports = class {
       res.end("received file chunk");
     });
   }
+  // 验证是否已上传/已上传切片下标
   handleVerifyUpload(req, res) {
     resolvePost(req, async data => {
       const { fileHash, filename } = JSON.parse(data);

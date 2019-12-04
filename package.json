@@ -4,8 +4,7 @@
   "description": "大文件上传",
   "main": "index.js",
   "scripts": {
-    "start": "vue-cli-service serve",
-    "server":"nodemon server/index.js",
+    "start": "vue-cli-service serve & nodemon server/index.js",
     "lint:js": "eslint --fix",
     "lint": "eslint . --fix"
   },

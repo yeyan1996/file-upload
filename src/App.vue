@@ -104,7 +104,7 @@ export default {
           // 将请求成功的 xhr 从列表中删除
           if (requestList) {
             const xhrIndex = requestList.findIndex(item => item === xhr);
-            this.requestList.splice(xhrIndex, 1);
+            requestList.splice(xhrIndex, 1);
           }
           resolve({
             data: e.target.response
@@ -199,6 +199,8 @@ export default {
           })
         );
       await Promise.all(requestList);
+      // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时
+      // 合并切片
       if (uploadedIndex.length + requestList.length === this.data.length) {
         await this.mergeRequest();
       }
@@ -217,6 +219,7 @@ export default {
       this.$message.success("上传成功");
       this.uploadCompleted = true;
     },
+    // 验证是否已上传/已上传切片下标
     async verifyUpload(filename, fileHash) {
       const { data } = await this.request({
         url: "http://localhost:3000/verify",
