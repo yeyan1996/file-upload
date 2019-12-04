@@ -3,6 +3,8 @@
     <div>
       <input type="file" @change="handleFileChange" />
       <el-button @click="handleUpload">上传</el-button>
+      <el-button @click="handlePause" v-if="!isPaused">暂停</el-button>
+      <el-button @click="handleResume" v-else>恢复</el-button>
     </div>
     <div>
       <div>计算文件 hash</div>
@@ -16,11 +18,11 @@
         label="切片hash"
         align="center"
       ></el-table-column>
-      <el-table-column
-        prop="size"
-        label="大小(B)"
-        align="center"
-      ></el-table-column>
+      <el-table-column label="大小(KB)" align="center">
+        <template v-slot="{ row }">
+          {{ row.size | transformByte }}
+        </template>
+      </el-table-column>
       <el-table-column label="进度" align="center">
         <template v-slot="{ row }">
           <el-progress :percentage="row.percentage"></el-progress>
@@ -36,6 +38,11 @@ import SparkMD5 from "spark-md5";
 
 export default {
   name: "app",
+  filters: {
+    transformByte(val) {
+      return Number((val / 1024).toFixed(0));
+    }
+  },
   data: () => ({
     container: {
       file: null,
@@ -43,6 +50,8 @@ export default {
     },
     hashPercentage: 0,
     data: [],
+    requestList: [],
+    isPaused: false,
     uploadCompleted: false
   }),
   computed: {
@@ -55,8 +64,34 @@ export default {
     }
   },
   methods: {
+    handlePause() {
+      if (!this.container.file || this.uploadCompleted) return;
+      this.isPaused = true;
+      this.requestList.forEach(xhr => xhr && xhr.abort());
+    },
+    async handleResume() {
+      this.isPaused = false;
+      const { data } = await this.request({
+        url: "http://localhost:3000/resume",
+        headers: {
+          "content-type": "application/json"
+        },
+        data: JSON.stringify({
+          fileHash: this.container.hash
+        })
+      });
+      const uploadedIndex = JSON.parse(data).uploadedIndex;
+      await this.uploadChunks(uploadedIndex);
+    },
     // xhr
-    request({ url, method = "post", data, headers = {}, onProgress = e => e }) {
+    request({
+      url,
+      method = "post",
+      data,
+      headers = {},
+      onProgress = e => e,
+      requestList
+    }) {
       return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
         xhr.upload.onprogress = onProgress;
@@ -65,7 +100,20 @@ export default {
           xhr.setRequestHeader(key, headers[key])
         );
         xhr.send(data);
-        xhr.onload = e => resolve(e);
+        xhr.onload = e => {
+          // 将请求成功的 xhr 从列表中删除
+          if (requestList) {
+            const xhrIndex = requestList.findIndex(item => item === xhr);
+            this.requestList.splice(xhrIndex, 1);
+          }
+          resolve({
+            data: e.target.response
+          });
+        };
+        // 暴露当前 xhr 给外部
+        if (requestList) {
+          requestList.push(xhr);
+        }
       });
     },
     // 生成文件切片
@@ -110,7 +158,7 @@ export default {
       const fileChunkList = this.createFileChunk(this.container.file);
       this.container.hash = await this.calculateHash(fileChunkList);
 
-      const shouldUpload = await this.verifyUpload(
+      const { shouldUpload, uploadIndex } = await this.verifyUpload(
         this.container.file.name,
         this.container.hash
       );
@@ -122,29 +170,40 @@ export default {
 
       this.data = fileChunkList.map(({ file }, index) => ({
         fileHash: this.container.hash,
+        index,
         hash: this.container.hash + "-" + index,
         chunk: file,
         size: file.size,
-        percentage: 0
+        percentage: uploadIndex.includes(index) ? 100 : 0
       }));
 
+      await this.uploadChunks(uploadIndex);
+    },
+    async uploadChunks(uploadedIndex = []) {
       const requestList = this.data
-        .map(({ chunk, hash }) => {
+        .filter((_, index) => !uploadedIndex.includes(index))
+        .map(({ chunk, hash, index }) => {
           const formData = new FormData();
           formData.append("chunk", chunk);
           formData.append("hash", hash);
           formData.append("filename", this.container.file.name);
           formData.append("fileHash", this.container.hash);
-          return formData;
+          return { formData, index };
         })
-        .map((formData, index) =>
+        .map(async ({ formData, index }) =>
           this.request({
             url: "http://localhost:3000",
             data: formData,
-            onProgress: this.createProgressHandler(this.data[index])
+            onProgress: this.createProgressHandler(this.data[index]),
+            requestList: this.requestList
           })
         );
       await Promise.all(requestList);
+      if (uploadedIndex.length + requestList.length === this.data.length) {
+        await this.mergeRequest();
+      }
+    },
+    async mergeRequest() {
       await this.request({
         url: "http://localhost:3000/merge",
         headers: {
@@ -159,7 +218,7 @@ export default {
       this.uploadCompleted = true;
     },
     async verifyUpload(filename, fileHash) {
-      const res = await this.request({
+      const { data } = await this.request({
         url: "http://localhost:3000/verify",
         headers: {
           "content-type": "application/json"
@@ -169,7 +228,7 @@ export default {
           fileHash
         })
       });
-      return JSON.parse(res.target.response).shouldUpload;
+      return JSON.parse(data);
     },
     createProgressHandler(item) {
       return e => {
