@@ -18,7 +18,7 @@
         label="切片hash"
         align="center"
       ></el-table-column>
-      <el-table-column label="大小(KB)" align="center">
+      <el-table-column label="大小(KB)" align="center" width="120">
         <template v-slot="{ row }">
           {{ row.size | transformByte }}
         </template>
@@ -34,7 +34,6 @@
 
 <script>
 const LENGTH = 10; // 切片数量
-import SparkMD5 from "spark-md5";
 
 export default {
   name: "app",
@@ -70,6 +69,7 @@ export default {
       this.requestList.forEach(xhr => xhr && xhr.abort());
     },
     async handleResume() {
+      if (this.uploadCompleted) return;
       this.isPaused = false;
       const { data } = await this.request({
         url: "http://localhost:3000/resume",
@@ -127,36 +127,31 @@ export default {
       }
       return fileChunkList;
     },
-    calculateHash(fileChunkList) {
+    // 生成文件 hash（web-worker）
+    calculateHash(fileChunkList, length) {
       return new Promise(resolve => {
-        const spark = new SparkMD5.ArrayBuffer();
-        let count = 0;
-        const loadNext = index => {
-          const reader = new FileReader();
-          reader.readAsArrayBuffer(fileChunkList[index].file);
-          reader.onload = e => {
-            count++;
-            spark.append(e.target.result);
-            this.hashPercentage += 100 / LENGTH;
-            if (count === fileChunkList.length) {
-              resolve(spark.end());
-            } else {
-              loadNext(count);
-            }
-          };
+        const worker = new Worker("/hash.js");
+        worker.postMessage({ fileChunkList, length });
+        worker.onmessage = e => {
+          const { percentage, hash } = e.data;
+          this.hashPercentage = percentage;
+          if (hash) {
+            resolve(hash);
+          }
         };
-        loadNext(0);
       });
     },
     async handleFileChange(e) {
+      const [file] = e.target.files;
+      if (!file) return;
       Object.assign(this.$data, this.$options.data());
-      [this.container.file] = e.target.files;
+      this.container.file = file;
     },
     async handleUpload() {
       if (!this.container.file || this.uploadCompleted) return;
 
       const fileChunkList = this.createFileChunk(this.container.file);
-      this.container.hash = await this.calculateHash(fileChunkList);
+      this.container.hash = await this.calculateHash(fileChunkList, LENGTH);
 
       const { shouldUpload, uploadIndex } = await this.verifyUpload(
         this.container.file.name,
@@ -179,6 +174,7 @@ export default {
 
       await this.uploadChunks(uploadIndex);
     },
+    // 上传切片，过滤已上传的切片
     async uploadChunks(uploadedIndex = []) {
       const requestList = this.data
         .filter((_, index) => !uploadedIndex.includes(index))
@@ -218,6 +214,7 @@ export default {
       });
       this.$message.success("上传成功");
       this.uploadCompleted = true;
+      this.isPaused = false;
     },
     // 验证是否已上传/已上传切片下标
     async verifyUpload(filename, fileHash) {
@@ -241,5 +238,3 @@ export default {
   }
 };
 </script>
-
-<style lang="scss"></style>

@@ -4,7 +4,7 @@ const fse = require("fs-extra");
 
 const extractExt = filename =>
   filename.slice(filename.lastIndexOf("."), filename.length);
-const TEMP_DIR = path.resolve(__dirname, "..", "target/temp"); // 临时文件存储目录
+const TEMP_DIR = path.resolve(__dirname, "..", ".temp"); // 临时文件存储目录
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target"); // 大文件存储目录
 
 // 合并切片
@@ -42,6 +42,7 @@ const createUploadIndex = async fileHash => {
 };
 
 module.exports = class {
+  // 恢复
   handleResume(req, res) {
     resolvePost(req, async data => {
       const { fileHash } = JSON.parse(data);
@@ -67,6 +68,7 @@ module.exports = class {
       );
     });
   }
+  // 处理切片
   async handleFormData(req, res) {
     // 临时目录不存在，创建临时目录
     if (!fse.existsSync(TEMP_DIR)) {
