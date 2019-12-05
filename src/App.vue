@@ -2,8 +2,15 @@
   <div id="app">
     <div>
       <input type="file" @change="handleFileChange" />
-      <el-button @click="handleUpload">上传</el-button>
-      <el-button @click="handlePause" v-if="!isPaused">暂停</el-button>
+      <el-button @click="handleUpload" :disabled="uploadCompleted"
+        >上传</el-button
+      >
+      <el-button
+        v-if="!isPaused"
+        :disabled="!container.hash || uploadCompleted"
+        @click="handlePause"
+        >暂停</el-button
+      >
       <el-button @click="handleResume" v-else>恢复</el-button>
     </div>
     <div>
@@ -45,7 +52,8 @@ export default {
   data: () => ({
     container: {
       file: null,
-      hash: ""
+      hash: "",
+      worker: null
     },
     hashPercentage: 0,
     data: [],
@@ -64,12 +72,17 @@ export default {
   },
   methods: {
     handlePause() {
-      if (!this.container.file || this.uploadCompleted) return;
       this.isPaused = true;
+      this.resetData();
+    },
+    resetData() {
       this.requestList.forEach(xhr => xhr && xhr.abort());
+      this.requestList = [];
+      if (this.container.worker) {
+        this.container.worker.onmessage = null;
+      }
     },
     async handleResume() {
-      if (this.uploadCompleted) return;
       this.isPaused = false;
       const { data } = await this.request({
         url: "http://localhost:3000/resume",
@@ -80,8 +93,8 @@ export default {
           fileHash: this.container.hash
         })
       });
-      const uploadedIndex = JSON.parse(data).uploadedIndex;
-      await this.uploadChunks(uploadedIndex);
+      const uploadedList = JSON.parse(data).uploadedList;
+      await this.uploadChunks(uploadedList);
     },
     // xhr
     request({
@@ -130,9 +143,9 @@ export default {
     // 生成文件 hash（web-worker）
     calculateHash(fileChunkList, length) {
       return new Promise(resolve => {
-        const worker = new Worker("/hash.js");
-        worker.postMessage({ fileChunkList, length });
-        worker.onmessage = e => {
+        this.container.worker = new Worker("/hash.js");
+        this.container.worker.postMessage({ fileChunkList, length });
+        this.container.worker.onmessage = e => {
           const { percentage, hash } = e.data;
           this.hashPercentage = percentage;
           if (hash) {
@@ -144,6 +157,7 @@ export default {
     async handleFileChange(e) {
       const [file] = e.target.files;
       if (!file) return;
+      this.resetData();
       Object.assign(this.$data, this.$options.data());
       this.container.file = file;
     },
@@ -153,7 +167,7 @@ export default {
       const fileChunkList = this.createFileChunk(this.container.file);
       this.container.hash = await this.calculateHash(fileChunkList, LENGTH);
 
-      const { shouldUpload, uploadIndex } = await this.verifyUpload(
+      const { shouldUpload, uploadedList } = await this.verifyUpload(
         this.container.file.name,
         this.container.hash
       );
@@ -169,15 +183,15 @@ export default {
         hash: this.container.hash + "-" + index,
         chunk: file,
         size: file.size,
-        percentage: uploadIndex.includes(index) ? 100 : 0
+        percentage: uploadedList.includes(index) ? 100 : 0
       }));
 
-      await this.uploadChunks(uploadIndex);
+      await this.uploadChunks(uploadedList);
     },
-    // 上传切片，过滤已上传的切片
-    async uploadChunks(uploadedIndex = []) {
+    // 上传切片，并过滤已上传的切片
+    async uploadChunks(uploadedList = []) {
       const requestList = this.data
-        .filter((_, index) => !uploadedIndex.includes(index))
+        .filter((_, index) => !uploadedList.includes(index))
         .map(({ chunk, hash, index }) => {
           const formData = new FormData();
           formData.append("chunk", chunk);
@@ -197,7 +211,7 @@ export default {
       await Promise.all(requestList);
       // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时
       // 合并切片
-      if (uploadedIndex.length + requestList.length === this.data.length) {
+      if (uploadedList.length + requestList.length === this.data.length) {
         await this.mergeRequest();
       }
     },

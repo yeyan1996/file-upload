@@ -18,3 +18,5 @@ npm install
 ```
 npm run start
 ```
+
+文件切片在 .temp 文件夹中临时存储，最后转移到 target 文件夹并合并成一个完整文件

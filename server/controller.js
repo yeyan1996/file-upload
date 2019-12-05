@@ -30,7 +30,7 @@ const resolvePost = (req, cb) => {
 };
 
 // 生成已经上传的切片下标
-const createUploadIndex = async fileHash => {
+const createUploadedList = async fileHash => {
   if (fse.existsSync(`${UPLOAD_DIR}/${fileHash}`)) {
     const chunksName = await fse.readdir(`${UPLOAD_DIR}/${fileHash}`);
     return chunksName.map(chunkName =>
@@ -48,7 +48,7 @@ module.exports = class {
       const { fileHash } = JSON.parse(data);
       res.end(
         JSON.stringify({
-          uploadedIndex: await createUploadIndex(fileHash)
+          uploadedList: await createUploadedList(fileHash)
         })
       );
     });
@@ -124,7 +124,7 @@ module.exports = class {
         res.end(
           JSON.stringify({
             shouldUpload: true,
-            uploadIndex: await createUploadIndex(fileHash)
+            uploadedList: await createUploadedList(fileHash)
           })
         );
       }
