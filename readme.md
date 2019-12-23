@@ -4,7 +4,10 @@
 
 ![](https://tva1.sinaimg.cn/large/006tNbRwgy1ga5u984kjnj30ni0cajwe.jpg)
 
-示例文件为 /public/林俊杰-我们很好.mp3
+
+重新演示上传需要删除 /target 中的文件，否则由于服务端保存了文件上传会直接成功
+
+示例文件： /public/林俊杰-我们很好.mp3
 
 
 前端

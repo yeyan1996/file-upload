@@ -3,20 +3,20 @@ const path = require("path");
 const fse = require("fs-extra");
 
 const extractExt = filename =>
-  filename.slice(filename.lastIndexOf("."), filename.length);
+  filename.slice(filename.lastIndexOf("."), filename.length); // 提取后缀名
 const TEMP_DIR = path.resolve(__dirname, "..", ".temp"); // 临时文件存储目录
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target"); // 大文件存储目录
 
 // 合并切片
 const mergeFileChunk = async (filePath, fileHash) => {
   const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
-  const chunkPaths = fse.readdirSync(chunkDir);
-  await fse.writeFileSync(filePath, "");
+  const chunkPaths = await fse.readdir(chunkDir);
+  await fse.writeFile(filePath, "");
   chunkPaths.forEach(chunkPath => {
     fse.appendFileSync(filePath, fse.readFileSync(`${chunkDir}/${chunkPath}`));
     fse.unlinkSync(`${chunkDir}/${chunkPath}`);
   });
-  fse.rmdirSync(chunkDir);
+  fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
 };
 
 const resolvePost = (req, cb) => {

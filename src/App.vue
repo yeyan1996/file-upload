@@ -1,7 +1,11 @@
 <template>
   <div id="app">
     <div>
-      <input type="file" @change="handleFileChange" />
+      <input
+        type="file"
+        :disabled="status !== Status.wait"
+        @change="handleFileChange"
+      />
       <el-button @click="handleUpload" :disabled="uploadDisabled"
         >上传</el-button
       >
