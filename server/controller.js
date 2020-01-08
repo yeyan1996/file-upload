@@ -4,7 +4,6 @@ const fse = require("fs-extra");
 
 const extractExt = filename =>
   filename.slice(filename.lastIndexOf("."), filename.length); // 提取后缀名
-const TEMP_DIR = path.resolve(__dirname, "..", ".temp"); // 临时文件存储目录
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target"); // 大文件存储目录
 
 // 合并切片
@@ -69,15 +68,7 @@ module.exports = class {
   }
   // 处理切片
   async handleFormData(req, res) {
-    // 临时目录不存在，创建临时目录
-    if (!fse.existsSync(TEMP_DIR)) {
-      await fse.mkdirs(TEMP_DIR);
-    }
-
-    const multipart = new multiparty.Form({
-      autoFiles: true,
-      uploadDir: TEMP_DIR
-    });
+    const multipart = new multiparty.Form();
 
     multipart.parse(req, async (err, fields, files) => {
       if (err) {
