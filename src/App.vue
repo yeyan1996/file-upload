@@ -169,10 +169,10 @@ export default {
       return fileChunkList;
     },
     // 生成文件 hash（web-worker）
-    calculateHash(fileChunkList, length) {
+    calculateHash(fileChunkList) {
       return new Promise(resolve => {
         this.container.worker = new Worker("/hash.js");
-        this.container.worker.postMessage({ fileChunkList, length });
+        this.container.worker.postMessage({ fileChunkList });
         this.container.worker.onmessage = e => {
           const { percentage, hash } = e.data;
           this.hashPercentage = percentage;
@@ -193,7 +193,7 @@ export default {
       if (!this.container.file) return;
       this.status = Status.uploading;
       const fileChunkList = this.createFileChunk(this.container.file);
-      this.container.hash = await this.calculateHash(fileChunkList, LENGTH);
+      this.container.hash = await this.calculateHash(fileChunkList);
 
       const { shouldUpload, uploadedList } = await this.verifyUpload(
         this.container.file.name,
