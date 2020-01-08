@@ -13,17 +13,17 @@ server.on("request", async (req, res) => {
     return;
   }
   if (req.url === "/verify") {
-    controller.handleVerifyUpload(req, res);
+    await controller.handleVerifyUpload(req, res);
     return;
   }
 
   if (req.url === "/resume") {
-    controller.handleResume(req, res);
+    await controller.handleResume(req, res);
     return;
   }
 
   if (req.url === "/merge") {
-    controller.handleMerge(req, res);
+    await controller.handleMerge(req, res);
     return;
   }
 

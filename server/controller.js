@@ -19,15 +19,16 @@ const mergeFileChunk = async (filePath, fileHash) => {
   fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
 };
 
-const resolvePost = (req, cb) => {
-  let chunk = "";
-  req.on("data", data => {
-    chunk += data;
+const resolvePost = req =>
+  new Promise(resolve => {
+    let chunk = "";
+    req.on("data", data => {
+      chunk += data;
+    });
+    req.on("end", () => {
+      resolve(JSON.parse(chunk));
+    });
   });
-  req.on("end", () => {
-    cb(chunk);
-  });
-};
 
 // 生成已经上传的切片下标
 const createUploadedList = async fileHash => {
@@ -43,30 +44,28 @@ const createUploadedList = async fileHash => {
 
 module.exports = class {
   // 恢复
-  handleResume(req, res) {
-    resolvePost(req, async data => {
-      const { fileHash } = JSON.parse(data);
-      res.end(
-        JSON.stringify({
-          uploadedList: await createUploadedList(fileHash)
-        })
-      );
-    });
+  async handleResume(req, res) {
+    const data = await resolvePost(req);
+    const { fileHash } = data;
+    res.end(
+      JSON.stringify({
+        uploadedList: await createUploadedList(fileHash)
+      })
+    );
   }
   // 合并切片
-  handleMerge(req, res) {
-    resolvePost(req, async data => {
-      const { fileHash, filename } = JSON.parse(data);
-      const ext = extractExt(filename);
-      const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
-      await mergeFileChunk(filePath, fileHash);
-      res.end(
-        JSON.stringify({
-          code: 0,
-          message: "file merged success"
-        })
-      );
-    });
+  async handleMerge(req, res) {
+    const data = await resolvePost(req);
+    const { fileHash, filename } = data;
+    const ext = extractExt(filename);
+    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    await mergeFileChunk(filePath, fileHash);
+    res.end(
+      JSON.stringify({
+        code: 0,
+        message: "file merged success"
+      })
+    );
   }
   // 处理切片
   async handleFormData(req, res) {
@@ -109,25 +108,24 @@ module.exports = class {
     });
   }
   // 验证是否已上传/已上传切片下标
-  handleVerifyUpload(req, res) {
-    resolvePost(req, async data => {
-      const { fileHash, filename } = JSON.parse(data);
-      const ext = extractExt(filename);
-      const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
-      if (fse.existsSync(filePath)) {
-        res.end(
-          JSON.stringify({
-            shouldUpload: false
-          })
-        );
-      } else {
-        res.end(
-          JSON.stringify({
-            shouldUpload: true,
-            uploadedList: await createUploadedList(fileHash)
-          })
-        );
-      }
-    });
+  async handleVerifyUpload(req, res) {
+    const data = await resolvePost(req);
+    const { fileHash, filename } = data;
+    const ext = extractExt(filename);
+    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    if (fse.existsSync(filePath)) {
+      res.end(
+        JSON.stringify({
+          shouldUpload: false
+        })
+      );
+    } else {
+      res.end(
+        JSON.stringify({
+          shouldUpload: true,
+          uploadedList: await createUploadedList(fileHash)
+        })
+      );
+    }
   }
 };
