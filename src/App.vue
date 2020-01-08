@@ -200,7 +200,7 @@ export default {
         this.container.hash
       );
       if (!shouldUpload) {
-        this.$message.warning("文件已存在");
+        this.$message.success("秒传：上传成功");
         this.status = Status.wait;
         return;
       }
