@@ -29,29 +29,13 @@ const resolvePost = req =>
     });
   });
 
-// 生成已经上传的切片下标
-const createUploadedList = async fileHash => {
-  if (fse.existsSync(`${UPLOAD_DIR}/${fileHash}`)) {
-    const chunksName = await fse.readdir(`${UPLOAD_DIR}/${fileHash}`);
-    return chunksName.map(chunkName =>
-      Number(chunkName.slice(chunkName.lastIndexOf("-") + 1, chunkName.length))
-    );
-  } else {
-    return [];
-  }
-};
+// 返回已经上传切片名
+const createUploadedList = async fileHash =>
+  fse.existsSync(`${UPLOAD_DIR}/${fileHash}`)
+    ? await fse.readdir(`${UPLOAD_DIR}/${fileHash}`)
+    : [];
 
 module.exports = class {
-  // 恢复
-  async handleResume(req, res) {
-    const data = await resolvePost(req);
-    const { fileHash } = data;
-    res.end(
-      JSON.stringify({
-        uploadedList: await createUploadedList(fileHash)
-      })
-    );
-  }
   // 合并切片
   async handleMerge(req, res) {
     const data = await resolvePost(req);

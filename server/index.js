@@ -17,17 +17,14 @@ server.on("request", async (req, res) => {
     return;
   }
 
-  if (req.url === "/resume") {
-    await controller.handleResume(req, res);
-    return;
-  }
-
   if (req.url === "/merge") {
     await controller.handleMerge(req, res);
     return;
   }
 
-  await controller.handleFormData(req, res);
+  if (req.url === "/") {
+    await controller.handleMerge(req, res);
+  }
 });
 
 server.listen(3000, () => console.log("正在监听 3000 端口"));

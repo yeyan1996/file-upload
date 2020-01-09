@@ -114,16 +114,10 @@ export default {
     },
     async handleResume() {
       this.status = Status.uploading;
-      const { data } = await this.request({
-        url: "http://localhost:3000/resume",
-        headers: {
-          "content-type": "application/json"
-        },
-        data: JSON.stringify({
-          fileHash: this.container.hash
-        })
-      });
-      const uploadedList = JSON.parse(data).uploadedList;
+      const { uploadedList } = await this.verifyUpload(
+        this.container.file.name,
+        this.container.hash
+      );
       await this.uploadChunks(uploadedList);
     },
     // xhr
@@ -219,7 +213,7 @@ export default {
     // 上传切片，同时过滤已上传的切片
     async uploadChunks(uploadedList = []) {
       const requestList = this.data
-        .filter((_, index) => !uploadedList.includes(index))
+        .filter(({ hash }) => !uploadedList.includes(hash))
         .map(({ chunk, hash, index }) => {
           const formData = new FormData();
           formData.append("chunk", chunk);
