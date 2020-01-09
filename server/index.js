@@ -23,7 +23,7 @@ server.on("request", async (req, res) => {
   }
 
   if (req.url === "/") {
-    await controller.handleMerge(req, res);
+    await controller.handleFormData(req, res);
   }
 });
 
