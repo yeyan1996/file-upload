@@ -78,8 +78,8 @@ module.exports = class {
       if (!fse.existsSync(chunkDir)) {
         await fse.mkdirs(chunkDir);
       }
-      // fs-extra 专用方法，类似 fs.rename 但是跨平台
-      // fs.rename windows 平台会有权限问题
+      // fs-extra 专用方法，类似 fs.rename 并且跨平台
+      // fs-extra 的 rename 方法 windows 平台会有权限问题
       // https://github.com/meteor/meteor/issues/7852#issuecomment-255767835
       await fse.move(chunk.path, `${chunkDir}/${hash}`);
       res.end("received file chunk");
