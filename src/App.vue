@@ -176,7 +176,7 @@ export default {
         };
       });
     },
-    async handleFileChange(e) {
+    handleFileChange(e) {
       const [file] = e.target.files;
       if (!file) return;
       this.resetData();
