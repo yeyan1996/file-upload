@@ -6,15 +6,35 @@ const extractExt = filename =>
   filename.slice(filename.lastIndexOf("."), filename.length); // 提取后缀名
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target"); // 大文件存储目录
 
+const pipeStream = (path, writeStream) =>
+  new Promise(resolve => {
+    const readStream = fse.createReadStream(path);
+    readStream.on("end", () => {
+      fse.unlinkSync(path);
+      resolve();
+    });
+    readStream.pipe(writeStream);
+  });
+
 // 合并切片
-const mergeFileChunk = async (filePath, fileHash) => {
+const mergeFileChunk = async (filePath, fileHash, size) => {
   const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
   const chunkPaths = await fse.readdir(chunkDir);
-  await fse.writeFile(filePath, "");
-  chunkPaths.forEach(chunkPath => {
-    fse.appendFileSync(filePath, fse.readFileSync(`${chunkDir}/${chunkPath}`));
-    fse.unlinkSync(`${chunkDir}/${chunkPath}`);
-  });
+  // 根据切片下标进行排序
+  // 否则直接读取目录的获得的顺序可能会错乱
+  chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
+  await Promise.all(
+    chunkPaths.map((chunkPath, index) =>
+      pipeStream(
+        `${chunkDir}/${chunkPath}`,
+        // 指定位置创建可写流
+        fse.createWriteStream(filePath, {
+          start: index * size,
+          end: (index + 1) * size
+        })
+      )
+    )
+  );
   fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
 };
 
@@ -39,10 +59,10 @@ module.exports = class {
   // 合并切片
   async handleMerge(req, res) {
     const data = await resolvePost(req);
-    const { fileHash, filename } = data;
+    const { fileHash, filename, size } = data;
     const ext = extractExt(filename);
     const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
-    await mergeFileChunk(filePath, fileHash);
+    await mergeFileChunk(filePath, fileHash, size);
     res.end(
       JSON.stringify({
         code: 0,

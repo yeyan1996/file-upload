@@ -49,7 +49,8 @@
 </template>
 
 <script>
-const LENGTH = 10; // 切片数量
+const SIZE = 10 * 1024 * 1024; // 切片大小
+
 const Status = {
   wait: "wait",
   pause: "pause",
@@ -152,13 +153,12 @@ export default {
       });
     },
     // 生成文件切片
-    createFileChunk(file, length = LENGTH) {
+    createFileChunk(file, size = SIZE) {
       const fileChunkList = [];
-      const chunkSize = Math.ceil(file.size / length);
       let cur = 0;
       while (cur < file.size) {
-        fileChunkList.push({ file: file.slice(cur, cur + chunkSize) });
-        cur += chunkSize;
+        fileChunkList.push({ file: file.slice(cur, cur + size) });
+        cur += size;
       }
       return fileChunkList;
     },
@@ -245,6 +245,7 @@ export default {
           "content-type": "application/json"
         },
         data: JSON.stringify({
+          size: SIZE,
           fileHash: this.container.hash,
           filename: this.container.file.name
         })
