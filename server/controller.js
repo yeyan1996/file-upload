@@ -18,7 +18,7 @@ const pipeStream = (path, writeStream) =>
 
 // 合并切片
 const mergeFileChunk = async (filePath, fileHash, size) => {
-  const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
+  const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
   const chunkPaths = await fse.readdir(chunkDir);
   // 根据切片下标进行排序
   // 否则直接读取目录的获得的顺序可能会错乱
@@ -26,7 +26,7 @@ const mergeFileChunk = async (filePath, fileHash, size) => {
   await Promise.all(
     chunkPaths.map((chunkPath, index) =>
       pipeStream(
-        `${chunkDir}/${chunkPath}`,
+        path.resolve(chunkDir, chunkPath),
         // 指定位置创建可写流
         fse.createWriteStream(filePath, {
           start: index * size,
@@ -51,8 +51,8 @@ const resolvePost = req =>
 
 // 返回已经上传切片名
 const createUploadedList = async fileHash =>
-  fse.existsSync(`${UPLOAD_DIR}/${fileHash}`)
-    ? await fse.readdir(`${UPLOAD_DIR}/${fileHash}`)
+  fse.existsSync(path.resolve(UPLOAD_DIR, fileHash))
+    ? await fse.readdir(path.resolve(UPLOAD_DIR, fileHash))
     : [];
 
 module.exports = class {
@@ -61,7 +61,7 @@ module.exports = class {
     const data = await resolvePost(req);
     const { fileHash, filename, size } = data;
     const ext = extractExt(filename);
-    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`);
     await mergeFileChunk(filePath, fileHash, size);
     res.end(
       JSON.stringify({
@@ -85,8 +85,11 @@ module.exports = class {
       const [hash] = fields.hash;
       const [fileHash] = fields.fileHash;
       const [filename] = fields.filename;
-      const filePath = `${UPLOAD_DIR}/${fileHash}${extractExt(filename)}`;
-      const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
+      const filePath = path.resolve(
+        UPLOAD_DIR,
+        `${fileHash}${extractExt(filename)}`
+      );
+      const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
 
       // 文件存在直接返回
       if (fse.existsSync(filePath)) {
@@ -101,7 +104,7 @@ module.exports = class {
       // fs-extra 专用方法，类似 fs.rename 并且跨平台
       // fs-extra 的 rename 方法 windows 平台会有权限问题
       // https://github.com/meteor/meteor/issues/7852#issuecomment-255767835
-      await fse.move(chunk.path, `${chunkDir}/${hash}`);
+      await fse.move(chunk.path, path.resolve(chunkDir, hash));
       res.end("received file chunk");
     });
   }
@@ -110,7 +113,7 @@ module.exports = class {
     const data = await resolvePost(req);
     const { fileHash, filename } = data;
     const ext = extractExt(filename);
-    const filePath = `${UPLOAD_DIR}/${fileHash}${ext}`;
+    const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`);
     if (fse.existsSync(filePath)) {
       res.end(
         JSON.stringify({
