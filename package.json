@@ -1,7 +1,10 @@
 {
   "name": "file-upload",
   "version": "1.0.0",
-  "description": "大文件上传",
+  "description": "large file upload",
+  "engines": {
+    "node": "14.x"
+  },
   "main": "index.js",
   "scripts": {
     "start": "vue-cli-service serve & nodemon server/index.js",
@@ -52,7 +55,7 @@
     "fs-extra": "^8.1.0",
     "husky": "^3.1.0",
     "lint-staged": "^9.5.0",
-    "multiparty": "^4.2.1",
+    "multiparty": "^4.2.3",
     "nodemon": "^2.0.1",
     "prettier": "^1.19.1",
     "sass": "^1.23.7",
