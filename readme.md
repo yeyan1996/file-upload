@@ -1,8 +1,12 @@
 # 前端大文件上传 + 断点续传解决方案
 
+[english](./readme-en.md)
+
+> 推荐使用 nodejs14
+
 重新演示上传需要删除 /target 中的文件，否则由于服务端保存了文件上传会直接成功
 
-示例文件： /public/WebStorm-2019.3.1.dmg(`非 mac 的朋友自行找测试文件-。-`)
+示例文件下载：https://v0c98mphqw.feishu.cn/file/boxcnZ34jCyQziXxsS9NaV0zfre
 
 
 前端
