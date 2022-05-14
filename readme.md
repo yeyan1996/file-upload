@@ -2,21 +2,22 @@
 
 [english](./readme-en.md)
 
-> 推荐使用 nodejs14
+> 推荐使用 Nodejs14
 
 重新演示上传需要删除 /target 中的文件，否则由于服务端保存了文件上传会直接成功
 
-示例文件下载：https://v0c98mphqw.feishu.cn/file/boxcnZ34jCyQziXxsS9NaV0zfre
+示例大文件下载：https://v0c98mphqw.feishu.cn/file/boxcnZ34jCyQziXxsS9NaV0zfre
 
 
 前端
-* vue + element 界面展示
+* Vue
+* Element-ui  
 * Blob#slice 实现文件切片
-* FileReader + spark-md5 + web-worker 生成文件 hash
+* FileReader + WebWorker + spark-md5 生成文件 hash
 * xhr 发送 formData
 
 服务端
-* nodejs
+* Nodejs@14
 * multiparty 处理 formData
 
 # start
