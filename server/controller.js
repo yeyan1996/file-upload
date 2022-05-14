@@ -12,14 +12,14 @@ const extractExt = filename =>
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target");
 
 // 创建临时文件夹用于临时存储 chunk
-// 添加 tmpDir 前缀与文件名做区分
+// 添加 chunkDir 前缀与文件名做区分
 // create a directory for temporary storage of chunks
 // add the 'chunkDir' prefix to distinguish it from the chunk name
 const createChunkDir = fileHash =>
   path.resolve(UPLOAD_DIR, `chunkDir_${fileHash}`);
 
-// 通过文件流写入文件
-// write to file via stream
+// 写入文件流
+// write to file stream
 const pipeStream = (path, writeStream) =>
   new Promise(resolve => {
     const readStream = fse.createReadStream(path);
@@ -36,16 +36,19 @@ const mergeFileChunk = async (filePath, fileHash, size) => {
   const chunkDir = createChunkDir(fileHash);
   const chunkPaths = await fse.readdir(chunkDir);
   // 根据切片下标进行排序
-  // 否则直接读取目录的获得的顺序可能会错乱
+  // 否则直接读取目录的获得的顺序会错乱
   // sort by chunk index
   // otherwise, the order of reading the directory may be wrong
   chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
+
+  // 并发写入文件
+  // write file concurrently
   await Promise.all(
     chunkPaths.map((chunkPath, index) =>
       pipeStream(
         path.resolve(chunkDir, chunkPath),
-        // 指定位置创建可写流
-        // create write stream at the specified starting location
+        // 根据 size 在指定位置创建可写流
+        // create write stream at the specified starting location according to size
         fse.createWriteStream(filePath, {
           start: index * size
         })
@@ -68,8 +71,8 @@ const resolvePost = req =>
     });
   });
 
-// 返回已经上传切片名
-// return chunk name which is uploaded
+// 返回已上传的所有切片名
+// return chunk names which is uploaded
 const createUploadedList = async fileHash =>
   fse.existsSync(path.resolve(UPLOAD_DIR, fileHash))
     ? await fse.readdir(path.resolve(UPLOAD_DIR, fileHash))
@@ -125,6 +128,7 @@ module.exports = class {
         `${fileHash}${extractExt(filename)}`
       );
       const chunkDir = createChunkDir(fileHash);
+      const chunkPath = path.resolve(chunkDir, hash);
 
       // 文件存在直接返回
       // return if file is exists
@@ -133,12 +137,19 @@ module.exports = class {
         return;
       }
 
+      // 切片存在直接返回
+      // return if chunk is exists
+      if (fse.existsSync(chunkPath)) {
+        res.end("chunk exist");
+        return;
+      }
+
       // 切片目录不存在，创建切片目录
       // if chunk directory is not exist, create it
       if (!fse.existsSync(chunkDir)) {
         await fse.mkdirs(chunkDir);
       }
-      // fs-extra 专用方法，类似 fs.rename 并且跨平台
+
       // fs-extra 的 rename 方法 windows 平台会有权限问题
       // use fs.move instead of fs.rename
       // https://github.com/meteor/meteor/issues/7852#issuecomment-255767835

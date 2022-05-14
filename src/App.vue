@@ -21,10 +21,14 @@
       <el-button @click="handleDelete">delete</el-button>
     </div>
     <div>
-      <div>calculate chunk hash</div>
-      <el-progress :percentage="hashPercentage"></el-progress>
-      <div>percentage</div>
-      <el-progress :percentage="fakeUploadPercentage"></el-progress>
+      <div>
+        <div>calculate chunk hash</div>
+        <el-progress :percentage="hashPercentage"></el-progress>
+      </div>
+      <div>
+        <div>percentage</div>
+        <el-progress :percentage="fakeUploadPercentage"></el-progress>
+      </div>
     </div>
     <el-table :data="data">
       <el-table-column
@@ -152,6 +156,7 @@ export default {
         xhr.send(data);
         xhr.onload = e => {
           // 将请求成功的 xhr 从列表中删除
+          // remove xhr which status is success
           if (requestList) {
             const xhrIndex = requestList.findIndex(item => item === xhr);
             requestList.splice(xhrIndex, 1);
@@ -247,11 +252,9 @@ export default {
           })
         );
       await Promise.all(requestList);
-      // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时
-      // 合并切片
-      // merge chunks
-      // when the number of chunks uploaded before
-      // and the number of chunks uploaded this time
+      // 之前上传的切片数量 + 本次上传的切片数量 = 所有切片数量时合并切片
+      // merge chunks when the number of chunks uploaded before and
+      // the number of chunks uploaded this time
       // are equal to the number of all chunks
       if (uploadedList.length + requestList.length === this.data.length) {
         await this.mergeRequest();
