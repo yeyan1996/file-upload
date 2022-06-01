@@ -10,7 +10,7 @@
 
 
 前端
-* Vue
+* Vue@2
 * Element-ui  
 * Blob#slice 实现文件切片
 * FileReader + WebWorker + spark-md5 生成文件 hash
