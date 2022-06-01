@@ -8,7 +8,7 @@ download demo file: https://v0c98mphqw.feishu.cn/file/boxcnZ34jCyQziXxsS9NaV0zfr
 
 
 frontend
-* Vue
+* Vue@2
 * Element-ui
 * Blob#slice: file slice
 * FileReader + WebWorker + spark-md5: create file hash
