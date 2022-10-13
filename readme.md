@@ -1,6 +1,6 @@
 # 前端大文件上传 + 断点续传解决方案
 
-[english](./readme-en.md)
+[English](./readme-en.md)
 
 > 推荐使用 Nodejs14
 
