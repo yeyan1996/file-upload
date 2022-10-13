@@ -2,7 +2,7 @@
 
 > Node 14 is recommended
 
-To retry the upload, you need to delete the file in /target directory, otherwise the upload will succeed directly because the server cache the file
+To retry the upload, you need to delete the file in `/target` directory, otherwise the upload will succeed directly because the server cache the file
 
 download demo file: https://v0c98mphqw.feishu.cn/file/boxcnZ34jCyQziXxsS9NaV0zfre
 
