@@ -74,8 +74,8 @@ const resolvePost = req =>
 // 返回已上传的所有切片名
 // return chunk names which is uploaded
 const createUploadedList = async fileHash =>
-  fse.existsSync(path.resolve(UPLOAD_DIR, fileHash))
-    ? await fse.readdir(path.resolve(UPLOAD_DIR, fileHash))
+  fse.existsSync(createChunkDir(fileHash))
+    ? await fse.readdir(createChunkDir(fileHash))
     : [];
 
 module.exports = class {
