@@ -214,7 +214,9 @@ export default {
         this.container.hash
       );
       if (!shouldUpload) {
-        this.$message.success("skip upload：file upload success");
+        this.$message.success(
+          "skip upload：file upload success, check /target directory"
+        );
         this.status = Status.wait;
         return;
       }
@@ -274,7 +276,7 @@ export default {
           filename: this.container.file.name
         })
       });
-      this.$message.success("upload success");
+      this.$message.success("upload success, check /target directory");
       this.status = Status.wait;
     },
     // 根据 hash 验证文件是否曾经已经被上传过

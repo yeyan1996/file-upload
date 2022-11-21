@@ -2,21 +2,14 @@ const multiparty = require("multiparty");
 const path = require("path");
 const fse = require("fs-extra");
 
-// 提取后缀名
-// get file extension
-const extractExt = filename =>
-  filename.slice(filename.lastIndexOf("."), filename.length);
-
 // 大文件存储目录
 // demo directory
 const UPLOAD_DIR = path.resolve(__dirname, "..", "target");
 
-// 创建临时文件夹用于临时存储 chunk
-// 添加 chunkDir 前缀与文件名做区分
-// create a directory for temporary storage of chunks
-// add the 'chunkDir' prefix to distinguish it from the chunk name
-const createChunkDir = fileHash =>
-  path.resolve(UPLOAD_DIR, `chunkDir_${fileHash}`);
+// 提取后缀名
+// get file extension
+const extractExt = filename =>
+  filename.slice(filename.lastIndexOf("."), filename.length);
 
 // 写入文件流
 // write to file stream
@@ -30,10 +23,37 @@ const pipeStream = (path, writeStream) =>
     readStream.pipe(writeStream);
   });
 
+// 提取 body
+// extract body data from request
+const resolvePost = req =>
+  new Promise(resolve => {
+    let chunk = "";
+    req.on("data", data => {
+      chunk += data;
+    });
+    req.on("end", () => {
+      resolve(JSON.parse(chunk));
+    });
+  });
+
+// 创建临时文件夹用于临时存储 chunk
+// 添加 chunkDir 前缀与文件名做区分
+// create a directory for temporary storage of chunks
+// add the 'chunkDir' prefix to distinguish it from the chunk name
+const getChunkDir = fileHash =>
+  path.resolve(UPLOAD_DIR, `chunkDir_${fileHash}`);
+
+// 返回已上传的所有切片名
+// return chunk names which is uploaded
+const createUploadedList = async fileHash =>
+  fse.existsSync(getChunkDir(fileHash))
+    ? await fse.readdir(getChunkDir(fileHash))
+    : [];
+
 // 合并切片
 // merge file chunks
 const mergeFileChunk = async (filePath, fileHash, size) => {
-  const chunkDir = createChunkDir(fileHash);
+  const chunkDir = getChunkDir(fileHash);
   const chunkPaths = await fse.readdir(chunkDir);
   // 根据切片下标进行排序
   // 否则直接读取目录的获得的顺序会错乱
@@ -59,24 +79,6 @@ const mergeFileChunk = async (filePath, fileHash, size) => {
   // delete chunk directory after merging
   fse.rmdirSync(chunkDir);
 };
-
-const resolvePost = req =>
-  new Promise(resolve => {
-    let chunk = "";
-    req.on("data", data => {
-      chunk += data;
-    });
-    req.on("end", () => {
-      resolve(JSON.parse(chunk));
-    });
-  });
-
-// 返回已上传的所有切片名
-// return chunk names which is uploaded
-const createUploadedList = async fileHash =>
-  fse.existsSync(createChunkDir(fileHash))
-    ? await fse.readdir(createChunkDir(fileHash))
-    : [];
 
 module.exports = class {
   // 合并切片
@@ -127,7 +129,7 @@ module.exports = class {
         UPLOAD_DIR,
         `${fileHash}${extractExt(filename)}`
       );
-      const chunkDir = createChunkDir(fileHash);
+      const chunkDir = getChunkDir(fileHash);
       const chunkPath = path.resolve(chunkDir, hash);
 
       // 文件存在直接返回
