@@ -1,6 +1,6 @@
-# implement large file upload and resume feature
+# Implement Large File Upload and Resume Feature
 
-> Node 14 is recommended
+> node 14 is recommended
 
 To retry the upload, you need to delete the file in `/target` directory, otherwise the upload will succeed directly because the server cache the file
 
