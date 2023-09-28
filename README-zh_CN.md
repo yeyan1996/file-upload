@@ -1,6 +1,8 @@
 # 前端大文件上传 + 断点续传解决方案
 
-[English](./readme-en.md)
+[English](./README.md) | 中文
+
+[博客地址](https://juejin.im/post/5dff8a26e51d4558105420ed)
 
 > 推荐使用 Nodejs14
 
@@ -30,6 +32,3 @@ npm install
 npm run start
 ```
 
-# 相关博客
-[字节跳动面试官：请你实现一个大文件上传和断点续传](https://juejin.im/post/5dff8a26e51d4558105420ed
-)
