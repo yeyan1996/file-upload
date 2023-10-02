@@ -9,8 +9,8 @@ self.onmessage = e => {
   const spark = new self.SparkMD5.ArrayBuffer();
   let percentage = 0;
   let count = 0;
+  const reader = new FileReader();
   const loadNext = index => {
-    const reader = new FileReader();
     reader.readAsArrayBuffer(fileChunkList[index].file);
     reader.onload = e => {
       count++;
